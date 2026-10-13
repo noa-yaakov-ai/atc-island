@@ -161,6 +161,7 @@ $('pb').onclick=()=>{
  if(!audio.src||audio.src.indexOf(s.url)<0){audio.src=s.url}
  audio.volume=+$('vol').value;$('pt').textContent='מתחבר...';$('ld').className='live wait';
  audio.play().then(()=>{playing=true;$('pb').textContent='⏸'}).catch(()=>fail());
+ clearTimeout(window._to);window._to=setTimeout(()=>{if(audio.readyState<3&&$('ld').className!=='live ok'){audio.pause();audio.removeAttribute('src');fail()}},12000);
 };
 audio.onplaying=()=>{$('pt').textContent='משדר עכשיו';$('ld').className='live ok';playing=true;$('pb').textContent='⏸'};
 audio.onerror=()=>fail();audio.onwaiting=()=>{if(playing){$('pt').textContent='טוען...';$('ld').className='live wait'}};
