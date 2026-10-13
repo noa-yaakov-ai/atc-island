@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a9fb8">
+<meta name="robots" content="noindex">
+<title>אי הרדיו</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#1d8ea6;font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#17414d}
+#world{position:fixed;inset:0}
+canvas{width:100%;height:100%;display:block}
+.top{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+.pill{pointer-events:auto;background:rgba(255,255,255,.93);border-radius:999px;padding:8px 16px;font-weight:800;font-size:16px;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.ib{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.93);font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.18);font-family:inherit}
+#panel{position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));background:rgba(255,253,246,.97);border-radius:24px;padding:14px 16px;box-shadow:0 8px 28px rgba(0,0,0,.28);transform:translateY(130%);transition:transform .25s}
+#panel.on{transform:none}
+#panel h2{margin:0;font-size:20px}
+#panel .sub{opacity:.65;font-size:13px;margin-top:2px}
+.row{display:flex;gap:10px;align-items:center;margin-top:12px}
+.play{flex:0 0 auto;width:64px;height:64px;border-radius:50%;border:0;background:#ff9f1c;color:#fff;font-size:28px;box-shadow:0 4px 0 #d17b00;font-family:inherit}
+.stat{flex:1;font-size:14px;line-height:1.4}
+.live{display:inline-block;width:9px;height:9px;border-radius:50%;background:#bbb;margin-inline-end:6px}
+.live.ok{background:#2ecc71;animation:p 1.2s infinite}.live.bad{background:#e74c3c}.live.wait{background:#f1c40f}
+@keyframes p{50%{opacity:.35}}
+.lnk{display:block;margin-top:10px;font-size:13px;color:#0b6e86;text-decoration:underline;user-select:text}
+.vol{width:100%;margin-top:8px}
+#gate,#admin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,80,98,.8);z-index:5}
+#admin{display:none;overflow:auto;align-items:flex-start}
+.card{background:#fffdf6;border-radius:26px;padding:22px;width:100%;max-width:380px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.card h1{margin:0 0 4px;font-size:26px}
+.card p{margin:6px 0 12px;font-size:14px;opacity:.8}
+input,textarea{width:100%;border:2px solid #cfe3e8;border-radius:14px;padding:12px;font-size:17px;font-family:inherit;text-align:center;user-select:text;-webkit-user-select:text}
+button.main{margin-top:10px;background:#ff9f1c;border:0;border-radius:16px;padding:12px 28px;font-size:18px;font-weight:800;color:#fff;font-family:inherit;box-shadow:0 4px 0 #d17b00}
+#err{color:#c0392b;min-height:20px;font-size:14px;margin-top:6px}
+#admin .card{text-align:right}
+#admin textarea{height:260px;text-align:left;direction:ltr;font-size:13px;font-family:ui-monospace,monospace}
+.sm{font-size:12px;opacity:.7;margin:6px 0}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow button{flex:1;margin-top:8px;border:0;border-radius:12px;padding:10px;font-size:15px;font-weight:700;background:#e3f1f4;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="world"><canvas id="c"></canvas></div>
+<div class="top"><div class="pill">📻 אי הרדיו</div><div style="display:flex;gap:8px"><button class="ib" id="adm" style="display:none" aria-label="ניהול">⚙️</button></div></div>
+<div id="panel">
+ <h2 id="pn"></h2><div class="sub" id="ps"></div>
+ <div class="row"><button class="play" id="pb" aria-label="נגן">▶</button><div class="stat"><span class="live" id="ld"></span><span id="pt">הקישו נגן כדי להאזין</span><input class="vol" type="range" min="0" max="1" step="0.05" value="0.8" id="vol" aria-label="עוצמה" style="padding:0;border:0"></div></div>
+ <a class="lnk" id="open" target="_blank" rel="noopener noreferrer">פתיחת השידור בלשונית נפרדת (אם אין נגינה)</a>
+</div>
+<div id="gate"><div class="card">
+ <div style="font-size:52px">🏝️📻</div>
+ <h1>אי הרדיו</h1>
+ <p>שידורי הקשר של בקרת התעבורה האווירית בישראל. הכניסה בסיסמה.</p>
+ <input type="password" id="pw" placeholder="סיסמה" autocomplete="off" aria-label="סיסמה">
+ <div id="err"></div>
+ <button class="main" id="enter">כניסה</button>
+ <p style="font-size:12px;margin-top:14px">להאזנה בלבד, אין בכך תחליף לשידורים רשמיים.</p>
+</div></div>
+<div id="admin"><div class="card">
+ <h1 style="text-align:center">ניהול</h1>
+ <p>עריכת רשימת התחנות (JSON). השינויים נשמרים בדפדפן הזה בלבד. כדי לעדכן לכולם יש לייצא ולהעביר לנועה.</p>
+ <textarea id="json" spellcheck="false"></textarea>
+ <div class="btnrow"><button id="asave">שמירה</button><button id="areset">איפוס לברירת מחדל</button><button id="aexp">העתקת JSON</button><button id="aclose">סגירה</button></div>
+ <div class="sm" id="amsg"></div>
+</div></div>
+<script>
+const PKG={"it":310000,"salt":"Tm1UJyyRe7XE1kq8+REBrA==","data":{"iv":"wTe89gNfvD+mOIkk","ct":"dAW3j8dvSIx2RCWCkbQ77f0rDCTG9lt2/HomIwZyJdfW2L7mKNr8CDHeGbH2IIJwiNf538ZaseOvd5WlEnd8aR3vY9d0Ai8tmnO1zuyRkpfLCFKbAYUUWBatxDBaTlJg0/tRGRDbB/FXq+55DjWTrjHN9vxmLNkURyxGvnWL5dy7i248oeaFTdUm3Yfpsv90LuAyfl2BlIu9mth5Gu/Mmi/jqVYFzW7hyZqYFegf9cBlTylm5U0Q/T93YM1F5EjSoti3BwcqwZJd1HLCo77gq5bBJf7ZX0pTJn3H1lpWhBO1k93psaA1CV6JHWmwmUmBXcDXLz24HOYGdpgOlpKDT6sCXCeZeKQJ2O57lf4xP9fXRXq5wb42TVWTrJdm1OXaVTsmDhSQpwa5oPYt4gaASMJJ5mlTbqG3ROrpiuFd3kbYqh8G+bClC55BfeNY5/z5rFLeas5wS7SnCSZ5yhfhGIMTmTo1N4ZQlngUkQAdytDBmw349anr4ONOuPLMnS4B2cvNqhMn7LvtaKlbIrzrROYrxnKBJiaifaGALDv5YNU4Kf+iBuWEzzJNxDnbJqi2TZ07iBwi61TrGGZCZisXMTGKMKSzrzBn1vlhaGKHdVLx7o/+JuEB5rWxnCNA//AUzx/8S+e5SpMsQBBcsN1YsfpBZednqSm8UeZEOxOT5+t8jBCiC36nnEzZmqS4/jj4A2mnHZu/OQa39suev1BLy+BxMwlv8zIcyYfdTVAzZ+sxkGEFtw/CjX75HipkKJGheblx3/NLyapyjoiIBjcpy6jpELFWWWdlAz20VNS/Hu2021BGJKbcczR2MVlQMuUoOuD5jJ3MIvkVZ2DnOYZnfmfvfmSpBPGfn4OjNEGCVgtmDtOqqQabZwIqCQeIFsu/ebEvCA=="},"user":{"iv":"T04tRBTEtbli9RqA","ct":"aAD4gDmTcr0XBKoiXlWiQXvpCvGy6lNxrT11L8TiHF7UTdEz5J+UYJsSRoOCT5T71g=="},"admin":{"iv":"IZ+YCsEWUoZNMdZj","ct":"azSRRGiC2Kv5XU7vkX4zlvehtOYi4waxiYohFNymEZrEDcBrfpPjpojMHltji5klqg=="}};
+(()=>{
+const $=id=>document.getElementById(id);
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function key(pw,salt){const m=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(salt),iterations:PKG.it,hash:'SHA-256'},m,{name:'AES-GCM',length:256},false,['decrypt'])}
+async function dec(k,o){return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(o.iv)},k,b64(o.ct)))}
+let stations=[],role='user',cur=null,audio=new Audio();audio.preload='none';
+async function tryLogin(pw){
+ const k=await key(pw,PKG.salt);
+ for(const w of [PKG.admin,PKG.user]){
+  try{const raw=await dec(k,w);const kk=await crypto.subtle.importKey('raw',raw.slice(1),'AES-GCM',false,['decrypt']);
+   const role=raw[0]===65?'admin':'user';
+   const data=JSON.parse(new TextDecoder().decode(await dec(kk,PKG.data)));return {role,data}}catch(e){}
+ }
+ return null;
+}
+$('enter').onclick=go;$('pw').onkeydown=e=>{if(e.key==='Enter')go()};
+async function go(){
+ $('err').textContent='';const pw=$('pw').value;if(!pw)return;
+ $('enter').disabled=true;const r=await tryLogin(pw).catch(()=>null);$('enter').disabled=false;
+ if(!r){$('err').textContent='סיסמה שגויה';return}
+ role=r.role;let st=r.data;
+ if(role==='admin'){$('adm').style.display='';}
+ try{const l=JSON.parse(localStorage.getItem('atc-island-stations')||'null');if(l&&Array.isArray(l))st=l}catch(e){}
+ stations=st;window._def=r.data;$('gate').remove();layout();
+}
+// world
+const cv=$('c'),ctx=cv.getContext('2d');let W,H,D;
+function resize(){D=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*D;cv.height=H*D;layout()}
+addEventListener('resize',resize);
+let pos=[];
+function layout(){
+ const n=stations.length||1;const u=Math.min(W*0.1,40,(H*0.66)/(n*3.3+1));
+ const top=H*0.5-(n*u*3.3)/2+u*1.8;
+ pos=stations.map((s,i)=>({x:W/2+(i%2?1:-1)*W*0.2,y:top+i*u*3.3,sc:u/0.34}));
+ pos.u=u;pos.top=top;
+}
+const COL={tower:['#e8584f','#c93f37'],clear:['#f2b134','#cf8f16'],radar:['#7a6bd1','#5a4bb0'],atis:['#34b3a0','#238d7c']};
+function island(){
+ const n=pos.length,u=pos.u,cx=W/2,cy=pos.top+(n-1)*u*3.3/2+u*0.5,rx=W*0.49,ry=(n*u*3.3)/2+u*2.4;
+ ctx.fillStyle='rgba(255,255,255,.3)';blob(cx,cy,rx+9,ry+9);
+ ctx.fillStyle='#b98a4e';blob(cx,cy+14,rx,ry);
+ ctx.fillStyle='#86cf63';blob(cx,cy,rx,ry);
+ ctx.fillStyle='#78c458';blob(cx-rx*.35,cy-ry*.2,rx*.3,ry*.3);blob(cx+rx*.3,cy+ry*.35,rx*.3,ry*.25);
+ // runway
+ ctx.strokeStyle='#8d9aa1';ctx.lineWidth=u*.9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,cy-ry*.82);ctx.lineTo(cx,cy+ry*.82);ctx.stroke();
+ ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(cx,cy-ry*.8);ctx.lineTo(cx,cy+ry*.8);ctx.stroke();ctx.setLineDash([]);
+ // palms
+ for(const [fx,fy] of [[-.78,-.55],[.8,-.3],[-.82,.45],[.75,.6],[-.7,0]]){const px=cx+rx*fx,py=cy+ry*fy;ctx.fillStyle='#8a5a2b';ctx.fillRect(px-2,py-u*.7,4,u*.7);ctx.fillStyle='#3e9b4a';for(let k=0;k<5;k++){ctx.beginPath();ctx.ellipse(px+Math.cos(k*1.26)*u*.35,py-u*.7+Math.sin(k*1.26)*u*.18,u*.38,u*.12,k*1.26,0,7);ctx.fill()}}
+}
+function blob(cx,cy,rx,ry){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,7);ctx.fill()}
+function building(p,s,t,active,i){
+ const [c1,c2]=COL[s.kind]||COL.tower;const u=pos.u;
+ ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(p.x,p.y+u*1.05,u*1.5,u*.45,0,0,7);ctx.fill();
+ // tower shaft
+ ctx.fillStyle=c2;ctx.fillRect(p.x-u*.5,p.y-u*1.5,u*1,u*2.5);
+ ctx.fillStyle=c1;ctx.fillRect(p.x-u*.5,p.y-u*1.5,u*.5,u*2.5);
+ // terminal
+ ctx.fillStyle=c1;rr(p.x-u*1.2,p.y+u*.2,u*2.4,u*.85,6);ctx.fill();
+ ctx.fillStyle='#fff9c9';for(let k=-2;k<=1;k++)ctx.fillRect(p.x+k*u*.55+u*.1,p.y+u*.42,u*.35,u*.3);
+ // cab
+ ctx.fillStyle='#6fd0e6';rr(p.x-u*.85,p.y-u*2.2,u*1.7,u*.8,5);ctx.fill();
+ ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(p.x-u*.7,p.y-u*2.05,u*.6,u*.2);
+ ctx.fillStyle='#fff';rr(p.x-u*1.0,p.y-u*2.4,u*2,u*.25,4);ctx.fill();
+ ctx.strokeStyle='#44525a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x,p.y-u*2.4);ctx.lineTo(p.x,p.y-u*3.1);ctx.stroke();
+ const ay=p.y-u*3.1;ctx.fillStyle='#ff4d4d';ctx.beginPath();ctx.arc(p.x,ay,u*.12,0,7);ctx.fill();
+ if(active){for(let k=0;k<3;k++){const ph=((t/900)+k/3)%1;ctx.strokeStyle=`rgba(255,255,255,${.9*(1-ph)})`;ctx.lineWidth=3;for(const d of [0,Math.PI]){ctx.beginPath();ctx.arc(p.x,ay,u*(.3+ph*1.5),d-1.1,d+1.1);ctx.stroke()}}}
+ ctx.font=`800 ${Math.max(13,u*.42)}px system-ui,Arial`;ctx.textAlign='center';const w=ctx.measureText(s.name).width+18,h=u*.62+4;
+ ctx.fillStyle=active?'#ff9f1c':'rgba(255,255,255,.95)';rr(p.x-w/2,p.y+u*1.2,w,h,10);ctx.fill();
+ ctx.fillStyle=active?'#fff':'#17414d';ctx.textBaseline='middle';ctx.fillText(s.name,p.x,p.y+u*1.2+h/2);
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function frame(t){try{frame2(t)}catch(e){window.__e=e.message+e.stack}requestAnimationFrame(frame)}
+function frame2(t){window.__f=(window.__f||0)+1;
+ ctx.setTransform(D,0,0,D,0,0);
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#52c5d8');g.addColorStop(1,'#1d8ea6');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=2;
+ for(let i=0;i<14;i++){const x=((i*173+t*0.012*(1+i%3*.3))%(W+120))-60,y=(i*97)%H;ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+14,y-6,x+28,y);ctx.quadraticCurveTo(x+42,y+6,x+56,y);ctx.stroke()}
+ if(stations.length){island();const order=[...pos.keys()].sort((a,b)=>pos[a].y-pos[b].y);for(const i of order)building(pos[i],stations[i],t,cur===i&&playing,i)}
+}
+let playing=false;
+cv.addEventListener('pointerdown',e=>{
+ const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+ for(let i=0;i<pos.length;i++){const p=pos[i],u=pos.u;if(Math.abs(x-p.x)<u*1.6&&y>p.y-u*3.2&&y<p.y+u*2){select(i);return}}
+});
+function select(i){
+ if(cur!==i){audio.pause();playing=false;audio.removeAttribute('src');cur=i}
+ const s=stations[i];$('pn').textContent=s.name;$('ps').textContent=s.sub||'';$('open').href=s.url;$('pb').textContent='▶';$('pt').textContent='הקישו נגן כדי להאזין';$('ld').className='live';$('panel').classList.add('on');
+}
+$('pb').onclick=()=>{
+ if(cur==null)return;const s=stations[cur];
+ if(playing){audio.pause();playing=false;$('pb').textContent='▶';$('pt').textContent='מושהה';$('ld').className='live';return}
+ if(!audio.src||audio.src.indexOf(s.url)<0){audio.src=s.url}
+ audio.volume=+$('vol').value;$('pt').textContent='מתחבר...';$('ld').className='live wait';
+ audio.play().then(()=>{playing=true;$('pb').textContent='⏸'}).catch(()=>fail());
+};
+audio.onplaying=()=>{$('pt').textContent='משדר עכשיו';$('ld').className='live ok';playing=true;$('pb').textContent='⏸'};
+audio.onerror=()=>fail();audio.onwaiting=()=>{if(playing){$('pt').textContent='טוען...';$('ld').className='live wait'}};
+function fail(){playing=false;$('pb').textContent='▶';$('ld').className='live bad';$('pt').textContent='אין שמע כרגע. אפשר לנסות שוב או לפתוח את השידור בלשונית נפרדת.'}
+$('vol').oninput=()=>audio.volume=+$('vol').value;
+cv.addEventListener('pointerdown',e=>{if(!pos.some(p=>{const r=cv.getBoundingClientRect(),u=pos.u;return Math.abs(e.clientX-r.left-p.x)<u*1.6&&e.clientY-r.top>p.y-u*3.2&&e.clientY-r.top<p.y+u*2}))$('panel').classList.remove('on')},true);
+// admin
+$('adm').onclick=()=>{$('json').value=JSON.stringify(stations,null,1);$('admin').style.display='flex'};
+$('aclose').onclick=()=>$('admin').style.display='none';
+$('asave').onclick=()=>{try{const v=JSON.parse($('json').value);if(!Array.isArray(v)||v.some(s=>!s.name||!/^https:\/\//.test(s.url)))throw 0;stations=v;localStorage.setItem('atc-island-stations',JSON.stringify(v));cur=null;audio.pause();playing=false;$('panel').classList.remove('on');layout();$('amsg').textContent='נשמר בדפדפן הזה'}catch(e){$('amsg').textContent='JSON לא תקין (כל תחנה צריכה name ו-url שמתחיל ב-https)'}};
+$('areset').onclick=()=>{localStorage.removeItem('atc-island-stations');stations=window._def;$('json').value=JSON.stringify(stations,null,1);cur=null;layout();$('amsg').textContent='אופס'};
+$('aexp').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($('json').value).then(()=>$('amsg').textContent='הועתק')};
+window.__frame=frame2;resize();requestAnimationFrame(frame);
+if(location.hash==='#demo'){window.__demo=1}
+})();
+</script>
+</body>
+</html>
